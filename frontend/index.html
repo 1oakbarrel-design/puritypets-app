@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PurityPets">
+<meta name="description" content="AI ingredient scanner for pet food and products. Know what's really in your pet's food.">
+<title>PurityPets — AI Pet Food Scanner</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#F7F9FF;--white:#FFFFFF;--card:#FFFFFF;
+  --border:#E4EAF6;--border2:#CDD6EE;
+  --text:#1A1F3C;--muted:#6B7280;--light:#9CA3AF;
+  --accent:#5B4FE8;--accent2:#7B6FF0;
+  --accent-bg:#F0EEFF;--accent-border:#C4BDFA;
+  --danger:#DC2626;--danger-bg:#FEF2F2;--danger-border:#FECACA;
+  --warn:#D97706;--warn-bg:#FFFBEB;--warn-border:#FDE68A;
+  --safe:#16A34A;--safe-bg:#F0FDF4;--safe-border:#BBF7D0;
+  --gold:#B45309;--gold-bg:#FFFBEB;--gold-border:#FDE68A;
+  --r:18px;--rs:13px;--rxs:8px;
+  --shadow:0 2px 8px rgba(26,31,60,0.07),0 1px 2px rgba(26,31,60,0.04);
+  --shadow-md:0 4px 16px rgba(26,31,60,0.10),0 2px 4px rgba(26,31,60,0.05);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;overflow-x:hidden;font-size:16px}
+body{display:flex;flex-direction:column;min-height:100dvh}
+.app{flex:1;max-width:480px;margin:0 auto;width:100%;display:flex;flex-direction:column}
+.screen{flex:1;overflow-y:auto;padding:20px 16px 100px;display:none}
+.screen.active{display:block}
+
+/* Auth */
+.auth-screen{min-height:100dvh;display:flex;flex-direction:column;background:var(--white)}
+.auth-hero{background:linear-gradient(145deg,#5B4FE8,#8B7FF8,#B8A4FF);padding:52px 24px 44px;text-align:center;position:relative;overflow:hidden}
+.auth-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,255,255,0.1);border-radius:50%}
+.auth-logo{font-size:36px;font-weight:800;color:#fff;letter-spacing:-1px;margin-bottom:6px;position:relative;z-index:1}
+.auth-emoji{font-size:56px;margin-bottom:14px;display:block;position:relative;z-index:1}
+.auth-tagline{font-size:15px;color:rgba(255,255,255,0.85);font-weight:500;line-height:1.5;position:relative;z-index:1}
+.auth-body{padding:28px 24px 48px;flex:1}
+.auth-tabs{display:flex;background:var(--bg);border-radius:var(--rs);padding:4px;margin-bottom:24px}
+.auth-tab{flex:1;padding:11px;text-align:center;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border-radius:10px;transition:all .2s}
+.auth-tab.active{background:var(--white);color:var(--text);box-shadow:var(--shadow)}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px}
+.field input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rs);padding:14px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;color:var(--text);outline:none;transition:border-color .2s}
+.field input:focus{border-color:var(--accent);background:var(--white)}
+.field input::placeholder{color:var(--light)}
+.auth-err{background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--rs);padding:12px 14px;font-size:13px;color:var(--danger);margin-bottom:16px;display:none}
+.consent{display:flex;align-items:flex-start;gap:10px;margin-bottom:20px}
+.consent input{width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:var(--accent)}
+.consent-text{font-size:13px;color:var(--muted);line-height:1.5}
+.consent-text a{color:var(--accent);text-decoration:none;font-weight:600}
+
+/* Buttons */
+.btn{width:100%;padding:16px;border:none;border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,#5B4FE8,#7B6FF0);color:#fff;box-shadow:0 4px 14px rgba(91,79,232,0.35)}
+.btn-primary:active{transform:scale(0.98)}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed}
+.btn-secondary{background:var(--white);color:var(--text);border:1.5px solid var(--border2)}
+.btn-gold{background:linear-gradient(135deg,#B45309,#D97706);color:#fff;box-shadow:0 4px 12px rgba(180,83,9,0.25)}
+.btn-sm{padding:8px 14px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s}
+.spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Header */
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.hdr-logo{font-size:24px;font-weight:800;color:var(--accent);letter-spacing:-0.5px}
+.hdr-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.scan-badge{background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);padding:6px 10px;text-align:center;box-shadow:var(--shadow)}
+.scan-badge-num{font-size:18px;font-weight:800;color:var(--accent);line-height:1}
+.scan-badge-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);margin-top:1px}
+.pro-chip{background:linear-gradient(135deg,#5B4FE8,#7B6FF0);border-radius:99px;padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#fff;font-weight:700;cursor:pointer}
+
+/* Pet selector */
+.pet-selector{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.pet-chip{flex-shrink:0;padding:8px 16px;background:var(--white);border:1.5px solid var(--border);border-radius:99px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;box-shadow:var(--shadow)}
+.pet-chip.active{background:var(--accent-bg);border-color:var(--accent-border);color:var(--accent)}
+
+/* Mode tabs */
+.mode-tabs{display:flex;gap:8px;margin-bottom:16px}
+.mode-tab{flex:1;padding:10px 8px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center;transition:all .2s;box-shadow:var(--shadow)}
+.mode-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Upload zone */
+.upload-zone{border:2px dashed var(--accent-border);border-radius:var(--r);padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--accent-bg);margin-bottom:12px;position:relative}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.uz-icon{font-size:44px;margin-bottom:12px;display:block}
+.uz-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px}
+.uz-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+.upload-btns{display:flex;gap:8px;justify-content:center}
+.upload-btn{background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);padding:9px 16px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;box-shadow:var(--shadow)}
+.upload-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Preview */
+.preview-wrap{border-radius:var(--r);overflow:hidden;margin-bottom:12px;border:1.5px solid var(--border);position:relative;box-shadow:var(--shadow)}
+.preview-wrap img{width:100%;max-height:220px;object-fit:cover;display:block}
+.preview-overlay{position:absolute;bottom:0;left:0;right:0;padding:10px;background:linear-gradient(transparent,rgba(0,0,0,0.6));display:flex;gap:8px}
+.ov-btn{background:rgba(255,255,255,0.2);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.3);border-radius:var(--rxs);padding:6px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;color:#fff;cursor:pointer}
+
+/* Error */
+.error-box{background:var(--danger-bg);border:1.5px solid var(--danger-border);border-radius:var(--rs);padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--danger);line-height:1.5;display:none}
+
+/* Score */
+.score-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 0 12px}
+.score-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.score-ring{position:relative;width:112px;height:112px}
+.score-ring svg{transform:rotate(-90deg)}
+.score-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-val{font-size:32px;font-weight:800;letter-spacing:-1px}
+.score-denom{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.score-grade{font-size:15px;font-weight:700;margin-top:8px}
+
+/* Results */
+.result-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.risk-pill{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px;padding:5px 12px;border-radius:99px;border:1.5px solid;text-transform:uppercase;font-weight:700}
+.risk-high{background:var(--danger-bg);border-color:var(--danger-border);color:var(--danger)}
+.risk-med{background:var(--warn-bg);border-color:var(--warn-border);color:var(--warn)}
+.risk-low{background:var(--safe-bg);border-color:var(--safe-border);color:var(--safe)}
+.summary-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);padding:16px;margin-bottom:8px;font-size:14px;color:var(--muted);line-height:1.7;box-shadow:var(--shadow)}
+.section-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--light);margin:16px 0 8px}
+.ing-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);padding:12px;display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;box-shadow:var(--shadow)}
+.ing-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.ing-dot.danger{background:var(--danger)}.ing-dot.caution{background:var(--warn)}.ing-dot.safe{background:var(--safe)}
+.ing-body{flex:1}
+.ing-name{font-size:15px;font-weight:700;margin-bottom:2px}
+.ing-cat{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.ing-cat.danger{color:var(--danger)}.ing-cat.caution{color:var(--warn)}.ing-cat.safe{color:var(--safe)}
+.ing-desc{font-size:13px;color:var(--muted);line-height:1.6}
+.alert-card{background:var(--danger-bg);border:1.5px solid var(--danger-border);border-radius:var(--rs);padding:12px 14px;margin-bottom:10px;font-size:13px;color:var(--danger);line-height:1.6}
+
+/* Pro modal */
+.price-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.price-opt{flex:1;min-width:120px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.price-opt.selected{border-color:var(--accent);background:var(--accent-bg)}
+.price-opt-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.price-amount{font-size:22px;font-weight:800;color:var(--text)}
+.price-period{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px}
+.price-savings{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-top:3px}
+.features-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.feat-card{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rs);padding:12px}
+.feat-icon{font-size:20px;margin-bottom:5px}
+.feat-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.feat-desc{font-size:12px;color:var(--muted);line-height:1.4}
+
+/* Modals */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+.modal-bg.open{display:flex}
+.modal{background:var(--white);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;max-height:92dvh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px}
+.modal-x{position:absolute;top:16px;right:16px;background:var(--bg);border:1.5px solid var(--border);border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--muted)}
+.modal-wrap{position:relative}
+
+/* History */
+.hist-item{background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow)}
+.hist-item:hover{border-color:var(--accent)}
+.hist-product{font-size:14px;font-weight:700;text-transform:capitalize;margin-bottom:2px}
+.hist-date{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--light);margin-bottom:2px}
+.hist-meta{font-size:12px;color:var(--muted)}
+.empty-state{text-align:center;padding:48px 20px}
+.empty-icon{font-size:48px;margin-bottom:14px;opacity:.25}
+.empty-title{font-size:16px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.empty-sub{font-size:13px;color:var(--light)}
+
+/* Account */
+.profile-row{background:var(--white);border:1.5px solid var(--border);border-radius:var(--rs);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow)}
+.profile-row:hover{border-color:var(--accent)}
+.profile-row-left{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600}
+.profile-row-arrow{font-size:16px;color:var(--light)}
+.section-title-acc{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;margin-top:20px}
+
+/* Tab bar */
+.tab-bar{display:flex;background:var(--white);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom);position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;z-index:100;box-shadow:0 -4px 20px rgba(26,31,60,0.08)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;gap:3px;cursor:pointer;border:none;background:none}
+.tab-icon{font-size:20px;color:var(--light)}
+.tab-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--light)}
+.tab.active .tab-icon,.tab.active .tab-label{color:var(--accent)}
+
+/* Misc */
+.divider{height:1px;background:var(--border);margin:14px 0}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:99px;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;max-width:92vw;text-align:center;box-shadow:var(--shadow-md)}
+.toast.show{opacity:1}
+.fade-in{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.free-banner{background:var(--gold-bg);border:1.5px solid var(--gold-border);border-radius:var(--rs);padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.free-banner-text{flex:1}
+.free-banner-title{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:1px}
+.free-banner-sub{font-size:12px;color:var(--muted)}
+.free-banner-btn{background:var(--gold);color:#fff;border:none;border-radius:var(--rxs);padding:7px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-hero">
+    <span class="auth-emoji">🐾</span>
+    <div class="auth-logo">PurityPets</div>
+    <div class="auth-tagline">AI ingredient scanner for your pets<br>Know what's really in their food</div>
+  </div>
+  <div class="auth-body">
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuthTab('login')">Sign In</div>
+      <div class="auth-tab" onclick="switchAuthTab('signup')">Get Started</div>
+    </div>
+    <div class="auth-err" id="authErr"></div>
+    <div id="loginForm">
+      <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="you@email.com" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password"></div>
+      <div style="text-align:right;margin-bottom:16px"><span onclick="switchAuthTab('forgot')" style="font-size:13px;color:var(--accent);cursor:pointer;font-weight:600">Forgot password?</span></div>
+      <button class="btn btn-primary" id="loginBtn" onclick="login()"><div class="spin" id="loginSpin"></div><span id="loginBtnText">Sign In</span></button>
+    </div>
+    <div id="signupForm" style="display:none">
+      <div class="field"><label>Email</label><input type="email" id="signupEmail" placeholder="you@email.com" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input type="password" id="signupPassword" placeholder="At least 8 characters" autocomplete="new-password"></div>
+      <div class="field"><label>Promo Code <span style="color:var(--light);font-weight:400">(optional)</span></label><input type="text" id="promoCode" placeholder="PETS-XXXXXX" style="text-transform:uppercase"></div>
+      <div class="consent"><input type="checkbox" id="gdprConsent"><div class="consent-text">I agree to the <a href="#" onclick="showLegal('privacy')">Privacy Policy</a> and <a href="#" onclick="showLegal('terms')">Terms</a>.</div></div>
+      <button class="btn btn-primary" id="signupBtn" onclick="signup()"><div class="spin" id="signupSpin"></div><span id="signupBtnText">Create Free Account</span></button>
+      <div style="font-size:13px;color:var(--muted);text-align:center;margin-top:12px">5 free scans/month · No credit card required</div>
+    </div>
+    <div id="forgotForm" style="display:none">
+      <div style="font-size:17px;font-weight:700;margin-bottom:16px">Reset password</div>
+      <div class="field"><label>Email</label><input type="email" id="forgotEmail" placeholder="you@email.com"></div>
+      <button class="btn btn-primary" id="forgotBtn" onclick="forgotPassword()"><div class="spin" id="forgotSpin"></div><span id="forgotBtnText">Send Reset Link</span></button>
+      <div style="text-align:center;margin-top:12px"><span onclick="switchAuthTab('login')" style="font-size:13px;color:var(--accent);cursor:pointer;font-weight:600">← Back to sign in</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="mainApp" style="display:none">
+
+  <!-- SCAN SCREEN -->
+  <div class="screen active" id="scanScreen">
+    <div class="hdr">
+      <div><div class="hdr-logo">🐾 PurityPets</div><div class="hdr-sub">// AI pet food scanner</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="scan-badge" id="scanBadge"><div class="scan-badge-num" id="scansLeft">5</div><div class="scan-badge-lbl">left</div></div>
+        <div class="pro-chip" id="proChip" onclick="openProModal()" style="display:none">⭐ PRO</div>
+      </div>
+    </div>
+
+    <div class="free-banner" id="freeBanner" style="display:none">
+      <span style="font-size:20px">⚡</span>
+      <div class="free-banner-text"><div class="free-banner-title">Running low on scans</div><div class="free-banner-sub">Pro = unlimited · $3.99/mo</div></div>
+      <button class="free-banner-btn" onclick="openProModal()">Upgrade</button>
+    </div>
+
+    <!-- Pet type selector -->
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--muted)">Select your pet</div>
+    <div class="pet-selector">
+      <div class="pet-chip active" id="petDog" onclick="selectPet('dog',this)">🐶 Dog</div>
+      <div class="pet-chip" id="petCat" onclick="selectPet('cat',this)">🐱 Cat</div>
+      <div class="pet-chip" id="petBird" onclick="selectPet('bird',this)">🦜 Bird</div>
+      <div class="pet-chip" id="petFish" onclick="selectPet('fish',this)">🐠 Fish</div>
+      <div class="pet-chip" id="petRabbit" onclick="selectPet('rabbit',this)">🐰 Rabbit</div>
+      <div class="pet-chip" id="petOther" onclick="selectPet('other',this)">🐾 Other</div>
+    </div>
+
+    <div class="mode-tabs">
+      <div class="mode-tab active" id="tabPhoto" onclick="setMode('photo')">📷 Photo</div>
+      <div class="mode-tab" id="tabBarcode" onclick="setMode('barcode')">📱 Barcode</div>
+    </div>
+
+    <div id="photoMode">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*">
+        <span class="uz-icon">🐾</span>
+        <div class="uz-title">Snap the ingredient label</div>
+        <div class="uz-sub">Pet food · Treats · Supplements · Toys</div>
+        <div class="upload-btns">
+          <button class="upload-btn" onclick="openCamera()">📷 Camera</button>
+          <button class="upload-btn" onclick="openGallery()">🖼 Gallery</button>
+        </div>
+      </div>
+      <div class="preview-wrap" id="previewWrap" style="display:none">
+        <img id="previewImg" src="" alt="">
+        <div class="preview-overlay">
+          <button class="ov-btn" onclick="openCamera()">📷 Retake</button>
+          <button class="ov-btn" onclick="openGallery()">🖼 Gallery</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="barcodeMode" style="display:none">
+      <div style="background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow)">
+        <div style="font-size:15px;font-weight:700;margin-bottom:4px">Barcode Lookup</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Enter the barcode from your pet's product</div>
+        <div style="display:flex;gap:8px">
+          <input class="barcode-input" type="number" id="barcodeInput" placeholder="e.g. 038100036743" inputmode="numeric" style="flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--rs);padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--text);outline:none;text-align:center">
+          <button class="btn-sm" onclick="lookupBarcode()">Look up</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div id="analyzeWrap" style="display:none;margin-bottom:12px">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">
+        <div class="spin" id="spin"></div>
+        <span id="btnIcon">🐾</span>
+        <span id="btnText">Analyze Ingredients</span>
+      </button>
+    </div>
+
+    <!-- Results -->
+    <div id="results" style="display:none" class="fade-in">
+      <div class="score-wrap">
+        <div class="score-label">Safety Score</div>
+        <div class="score-ring">
+          <svg width="112" height="112" viewBox="0 0 112 112">
+            <circle cx="56" cy="56" r="46" fill="none" stroke="#E8EAF0" stroke-width="10"/>
+            <circle id="scoreCircle" cx="56" cy="56" r="46" fill="none" stroke="#16A34A" stroke-width="10" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" style="transition:stroke-dashoffset 1.1s ease,stroke .5s ease"/>
+          </svg>
+          <div class="score-num"><div class="score-val" id="scoreVal">—</div><div class="score-denom">/ 100</div></div>
+        </div>
+        <div class="score-grade" id="scoreGrade"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="result-hdr">
+        <div style="font-size:19px;font-weight:800">Analysis</div>
+        <div class="risk-pill" id="riskPill"></div>
+      </div>
+      <div class="summary-card" id="summaryCard"></div>
+      <div class="alert-card" id="alertCard" style="display:none"></div>
+      <div class="section-label" id="flaggedLbl" style="display:none">⚠ Harmful / Concerning</div>
+      <div id="flaggedList"></div>
+      <div class="section-label" id="safeLbl" style="display:none">✓ Safe ingredients</div>
+      <div id="safeList"></div>
+      <div style="height:12px"></div>
+      <button class="btn btn-secondary" onclick="resetScan()">🐾 Scan Another Product</button>
+      <div style="height:20px"></div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="screen" id="histScreen">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:24px;font-weight:800">History</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px">// your past scans</div>
+      </div>
+    </div>
+    <div id="histList"></div>
+  </div>
+
+  <!-- ACCOUNT -->
+  <div class="screen" id="accountScreen">
+    <div style="margin-bottom:20px">
+      <div style="font-size:24px;font-weight:800">Account</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px" id="accountEmail"></div>
+    </div>
+    <div id="planCard" style="margin-bottom:16px"></div>
+    <div class="section-title-acc">Settings</div>
+    <div class="profile-row" onclick="openRedeemModal()"><div class="profile-row-left"><span>🎁</span> Redeem Code</div><span class="profile-row-arrow">›</span></div>
+    <div class="profile-row" onclick="showLegal('privacy')"><div class="profile-row-left"><span>🔒</span> Privacy Policy</div><span class="profile-row-arrow">›</span></div>
+    <div class="profile-row" onclick="showLegal('terms')"><div class="profile-row-left"><span>📋</span> Terms of Service</div><span class="profile-row-arrow">›</span></div>
+    <div class="profile-row" onclick="logout()"><div class="profile-row-left" style="color:var(--muted)"><span>👋</span> Sign Out</div><span class="profile-row-arrow">›</span></div>
+    <div style="text-align:center;padding:20px 0 8px"><div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--light)">PurityPets by PurityApps</div></div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="tab active" id="tabScan" onclick="switchTab('scan')"><span class="tab-icon">🐾</span><span class="tab-label">Scan</span></button>
+    <button class="tab" id="tabHist" onclick="switchTab('hist')"><span class="tab-icon">🕐</span><span class="tab-label">History</span></button>
+    <button class="tab" id="tabAcc" onclick="switchTab('account')"><span class="tab-icon">👤</span><span class="tab-label">Account</span></button>
+  </div>
+</div>
+
+<!-- PRO MODAL -->
+<div class="modal-bg" id="proModal">
+  <div class="modal modal-wrap">
+    <button class="modal-x" onclick="closeProModal()">✕</button>
+    <div class="modal-handle"></div>
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:10px">🐾</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:6px">PurityPets Pro</div>
+      <div style="font-size:13px;color:var(--muted)">Keep your pets safe from harmful ingredients</div>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card"><div class="feat-icon">♾️</div><div class="feat-title">Unlimited scans</div><div class="feat-desc">No monthly limits</div></div>
+      <div class="feat-card"><div class="feat-icon">🚨</div><div class="feat-title">Toxin alerts</div><div class="feat-desc">Instant danger warnings</div></div>
+      <div class="feat-card"><div class="feat-icon">🐶🐱</div><div class="feat-title">All pet types</div><div class="feat-desc">Dog, cat, bird & more</div></div>
+      <div class="feat-card"><div class="feat-icon">📦</div><div class="feat-title">All products</div><div class="feat-desc">Food, treats, supplements</div></div>
+    </div>
+    <div class="price-row">
+      <div class="price-opt" id="priceMonthly" onclick="selectPlan('monthly')"><div class="price-amount">$3.99</div><div class="price-period">per month</div></div>
+      <div class="price-opt selected" id="priceYearly" onclick="selectPlan('yearly')"><div class="price-opt-badge">SAVE 27%</div><div class="price-amount">$34.99</div><div class="price-period">per year</div><div class="price-savings">$2.92/month</div></div>
+    </div>
+    <button class="btn btn-primary" id="checkoutBtn" onclick="startCheckout()">
+      <div class="spin" id="checkoutSpin"></div>
+      <span id="checkoutBtnText">⭐ Start Pro — Free 7-day trial</span>
+    </button>
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:10px">Cancel anytime · Secure payment by Stripe</div>
+  </div>
+</div>
+
+<!-- REDEEM MODAL -->
+<div class="modal-bg" id="redeemModal">
+  <div class="modal modal-wrap">
+    <button class="modal-x" onclick="closeRedeemModal()">✕</button>
+    <div class="modal-handle"></div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px">🎁 Redeem Code</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:20px">Enter your VIP or Lifetime code</div>
+    <div class="field"><label>Your Code</label><input type="text" id="redeemCodeInput" placeholder="PETS-XXXXXX or PETS-LIFE-XXXXXXXX" style="text-transform:uppercase;font-family:'JetBrains Mono',monospace;letter-spacing:1px"></div>
+    <div id="redeemResult" style="margin-bottom:12px;font-size:13px"></div>
+    <button class="btn btn-primary" onclick="redeemCode()"><div class="spin" id="redeemSpin"></div><span id="redeemBtnText">Redeem</span></button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = 'https://puritypets-backend-production.up.railway.app';
+const ALLERGENS = ['Xylitol','Grapes','Raisins','Onions','Garlic','Chocolate','Caffeine','Alcohol','Macadamia nuts','Artificial sweeteners'];
+
+let token = localStorage.getItem('pp_token');
+let currentUser = null;
+let imgBase64 = null, imgMime = null, currentPet = 'dog', selectedPlan = 'yearly';
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...opts.headers };
+  const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+  const data = await res.json();
+  if (!res.ok) throw { status: res.status, ...data };
+  return data;
+}
+
+async function init() {
+  if (token) {
+    try {
+      const d = await api('/auth/me');
+      currentUser = d.user;
+      showApp();
+    } catch(e) {
+      localStorage.removeItem('pp_token');
+      token = null;
+      showAuth();
+    }
+  } else {
+    showAuth();
+  }
+}
+
+function showAuth() {
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+}
+
+function showApp() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'flex';
+  updateUI();
+  loadStats();
+}
+
+async function loadStats() {
+  try {
+    const d = await api('/analyze/stats');
+    if (d.is_pro) {
+      document.getElementById('scanBadge').style.display = 'none';
+      document.getElementById('proChip').style.display = 'block';
+    } else {
+      document.getElementById('scansLeft').textContent = d.scans_remaining || 0;
+      document.getElementById('freeBanner').style.display = (d.scans_remaining <= 1 && d.scans_remaining > 0) ? 'flex' : 'none';
+    }
+  } catch(e) {}
+}
+
+function updateUI() {
+  if (!currentUser) return;
+  document.getElementById('accountEmail').textContent = `// ${currentUser.email}`;
+  const planCard = document.getElementById('planCard');
+  if (currentUser.is_pro) {
+    planCard.innerHTML = `<div style="background:linear-gradient(135deg,#5B4FE8,#7B6FF0);border-radius:var(--r);padding:18px;color:#fff"><div style="font-size:11px;font-weight:700;opacity:0.8;margin-bottom:6px">PRO MEMBER</div><div style="font-size:17px;font-weight:800">Unlimited scans active ✓</div></div>`;
+  } else {
+    planCard.innerHTML = `<div style="background:var(--white);border:1.5px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)"><div style="font-size:15px;font-weight:700;margin-bottom:6px">Free Plan</div><div style="font-size:13px;color:var(--muted);margin-bottom:12px">5 scans/month · Dog & cat food only</div><button class="btn btn-primary" onclick="openProModal()" style="padding:12px">⭐ Upgrade to Pro — $3.99/month</button></div>`;
+  }
+}
+
+function switchAuthTab(tab) {
+  ['loginForm','signupForm','forgotForm'].forEach(id => document.getElementById(id).style.display = 'none');
+  const map = { login:'loginForm', signup:'signupForm', forgot:'forgotForm' };
+  if (map[tab]) document.getElementById(map[tab]).style.display = 'block';
+  document.querySelectorAll('.auth-tab').forEach((el,i) => el.classList.toggle('active', (i===0)===(tab==='login')));
+  document.getElementById('authErr').style.display = 'none';
+}
+
+function showAuthErr(msg) { const el = document.getElementById('authErr'); el.textContent = '⚠ ' + msg; el.style.display = 'block'; }
+
+function setAuthLoading(form, on, text) {
+  document.getElementById(`${form}Btn`).disabled = on;
+  document.getElementById(`${form}Spin`).style.display = on ? 'block' : 'none';
+  document.getElementById(`${form}BtnText`).textContent = on ? 'Please wait…' : text;
+}
+
+async function login() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) return showAuthErr('Email and password required');
+  setAuthLoading('login', true, 'Sign In');
+  try {
+    const d = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    token = d.token; currentUser = d.user;
+    localStorage.setItem('pp_token', token);
+    showApp();
+  } catch(e) { showAuthErr(e.error || 'Incorrect email or password'); }
+  finally { setAuthLoading('login', false, 'Sign In'); }
+}
+
+async function signup() {
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const promo = document.getElementById('promoCode').value.trim();
+  const consent = document.getElementById('gdprConsent').checked;
+  if (!email || !password) return showAuthErr('Email and password required');
+  if (password.length < 8) return showAuthErr('Password must be at least 8 characters');
+  if (!consent) return showAuthErr('Please agree to the Privacy Policy');
+  setAuthLoading('signup', true, 'Create Free Account');
+  try {
+    const d = await api('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, promo_code: promo || null, gdpr_consent: true }) });
+    token = d.token; currentUser = d.user;
+    localStorage.setItem('pp_token', token);
+    showApp();
+  } catch(e) { showAuthErr(e.error || 'Signup failed. Please try again.'); }
+  finally { setAuthLoading('signup', false, 'Create Free Account'); }
+}
+
+async function forgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) return showAuthErr('Email required');
+  setAuthLoading('forgot', true, 'Send Reset Link');
+  try {
+    await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+    document.getElementById('forgotForm').innerHTML = '<div style="font-size:14px;color:var(--safe);padding:16px 0">✓ Reset link sent! Check your inbox.</div>';
+  } catch(e) { showAuthErr(e.error || 'Request failed'); }
+  finally { setAuthLoading('forgot', false, 'Send Reset Link'); }
+}
+
+function logout() {
+  if (!confirm('Sign out?')) return;
+  localStorage.removeItem('pp_token');
+  token = null; currentUser = null;
+  showAuth();
+}
+
+function selectPet(pet, el) {
+  currentPet = pet;
+  document.querySelectorAll('.pet-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setMode(mode) {
+  ['photo','barcode'].forEach(m => {
+    document.getElementById(`tab${m.charAt(0).toUpperCase()+m.slice(1)}`).classList.toggle('active', m === mode);
+    document.getElementById(`${m}Mode`).style.display = m === mode ? 'block' : 'none';
+  });
+}
+
+async function openCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    stream.getTracks().forEach(t => t.stop());
+    const cam = document.createElement('input');
+    cam.type = 'file'; cam.accept = 'image/*'; cam.capture = 'environment'; cam.style.display = 'none';
+    cam.onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); document.body.removeChild(cam); };
+    document.body.appendChild(cam); cam.click();
+  } catch(e) { showToast('⚠ Camera access denied. Check Settings.'); }
+}
+
+function openGallery() { const fi = document.getElementById('fileInput'); fi.removeAttribute('capture'); fi.click(); }
+
+document.getElementById('fileInput').addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  if (!file.type.startsWith('image/')) return;
+  imgMime = file.type;
+  const reader = new FileReader();
+  reader.onload = e => {
+    imgBase64 = e.target.result.split(',')[1];
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('uploadZone').style.display = 'none';
+    document.getElementById('previewWrap').style.display = 'block';
+    document.getElementById('analyzeWrap').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('errorBox').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function lookupBarcode() {
+  const code = document.getElementById('barcodeInput').value.trim();
+  if (!code) return showToast('Enter a barcode number');
+  try {
+    const d = await api(`/analyze/barcode/${code}`);
+    showToast(`✓ Found: ${d.product_name || 'Product'}. Click Analyze.`);
+    document.getElementById('analyzeWrap').style.display = 'block';
+    imgBase64 = null;
+  } catch(e) { showToast('Product not found'); }
+}
+
+async function analyze() {
+  if (!imgBase64 && !document.getElementById('barcodeInput').value) return;
+  setLoading(true);
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  try {
+    const body = { mime_type: imgMime || 'image/jpeg', pet_type: currentPet };
+    if (imgBase64) body.image_base64 = imgBase64;
+    const d = await api('/analyze', { method: 'POST', body: JSON.stringify(body) });
+    renderResults(d.result, d.is_pro);
+    if (d.scans_remaining !== undefined) {
+      document.getElementById('scansLeft').textContent = d.scans_remaining;
+      document.getElementById('freeBanner').style.display = (d.scans_remaining <= 1 && d.scans_remaining > 0) ? 'flex' : 'none';
+    }
+  } catch(e) {
+    if (e.code === 'SCAN_LIMIT_REACHED') {
+      document.getElementById('errorBox').textContent = '⚠ Monthly limit reached. Upgrade for unlimited scans.';
+      document.getElementById('errorBox').style.display = 'block';
+      setTimeout(openProModal, 800);
+    } else {
+      document.getElementById('errorBox').textContent = '⚠ ' + (e.error || 'Analysis failed. Please try again.');
+      document.getElementById('errorBox').style.display = 'block';
+    }
+  } finally { setLoading(false); }
+}
+
+function setLoading(on) {
+  document.getElementById('analyzeBtn').disabled = on;
+  document.getElementById('spin').style.display = on ? 'block' : 'none';
+  document.getElementById('btnIcon').style.display = on ? 'none' : 'inline';
+  document.getElementById('btnText').textContent = on ? 'Analyzing…' : 'Analyze Ingredients';
+}
+
+function renderResults(data, isPro) {
+  const score = Math.max(0, Math.min(100, data.safety_score || 70));
+  const color = score >= 70 ? 'var(--safe)' : score >= 40 ? 'var(--warn)' : 'var(--danger)';
+  const circle = document.getElementById('scoreCircle');
+  circle.style.stroke = color;
+  setTimeout(() => { circle.style.strokeDashoffset = 289 - (score/100)*289; }, 100);
+  document.getElementById('scoreVal').textContent = score;
+  document.getElementById('scoreVal').style.color = color;
+  document.getElementById('scoreGrade').textContent = score >= 85 ? '🟢 Excellent' : score >= 70 ? '🟡 Acceptable' : score >= 50 ? '🟠 Use caution' : '🔴 Avoid this product';
+  const pill = document.getElementById('riskPill');
+  pill.textContent = data.overall_risk || 'Low risk';
+  pill.className = 'risk-pill ' + (data.overall_risk === 'High risk' ? 'risk-high' : data.overall_risk === 'Medium risk' ? 'risk-med' : 'risk-low');
+  document.getElementById('summaryCard').textContent = data.summary || '';
+  const toxic = data.toxic_ingredients || data.allergens_detected || [];
+  const alertEl = document.getElementById('alertCard');
+  if (toxic.length) { alertEl.innerHTML = `🚨 <strong>WARNING:</strong> Contains ingredients toxic to ${currentPet}s: ${toxic.join(', ')}`; alertEl.style.display = 'block'; }
+  else alertEl.style.display = 'none';
+  const flagged = (data.ingredients || []).filter(i => i.severity === 'danger' || i.severity === 'caution');
+  const safe = (data.ingredients || []).filter(i => i.severity === 'safe' || i.severity === 'info');
+  document.getElementById('flaggedLbl').style.display = flagged.length ? 'block' : 'none';
+  document.getElementById('safeLbl').style.display = safe.length ? 'block' : 'none';
+  const ingCard = item => `<div class="ing-card"><div class="ing-dot ${item.severity}"></div><div class="ing-body"><div class="ing-name">${item.name}</div>${item.category ? `<div class="ing-cat ${item.severity}">${item.category}</div>` : ''}<div class="ing-desc">${item.description}</div></div></div>`;
+  document.getElementById('flaggedList').innerHTML = flagged.map(ingCard).join('');
+  document.getElementById('safeList').innerHTML = safe.map(ingCard).join('');
+  document.getElementById('results').style.display = 'block';
+  setTimeout(() => document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+}
+
+function resetScan() {
+  imgBase64 = null; imgMime = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('uploadZone').style.display = 'block';
+  ['previewWrap','analyzeWrap','results','errorBox'].forEach(id => document.getElementById(id).style.display = 'none');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function selectPlan(plan) {
+  selectedPlan = plan;
+  ['monthly','yearly'].forEach(p => {
+    const id = `price${p.charAt(0).toUpperCase()+p.slice(1)}`;
+    document.getElementById(id)?.classList.toggle('selected', p === plan);
+  });
+}
+
+async function startCheckout() {
+  document.getElementById('checkoutBtn').disabled = true;
+  document.getElementById('checkoutSpin').style.display = 'block';
+  document.getElementById('checkoutBtnText').textContent = 'Redirecting…';
+  try {
+    const d = await api('/stripe/create-checkout', { method: 'POST', body: JSON.stringify({ plan: selectedPlan }) });
+    window.location.href = d.checkout_url;
+  } catch(e) {
+    showToast('⚠ Checkout unavailable. Try again later.');
+    document.getElementById('checkoutBtn').disabled = false;
+    document.getElementById('checkoutSpin').style.display = 'none';
+    document.getElementById('checkoutBtnText').textContent = '⭐ Start Pro — Free 7-day trial';
+  }
+}
+
+async function renderHistory() {
+  const el = document.getElementById('histList');
+  el.innerHTML = '<div class="empty-state"><div class="empty-icon">🕐</div><div class="empty-title">Loading…</div></div>';
+  try {
+    const d = await api('/analyze/history');
+    if (!d.scans.length) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">🐾</div><div class="empty-title">No scans yet</div><div class="empty-sub">Your history appears here after scanning</div></div>'; return; }
+    el.innerHTML = d.scans.map(s => `
+      <div class="hist-item">
+        <div>
+          <div class="hist-product">${s.product_name || s.product_type || 'Pet Product'}</div>
+          <div class="hist-date">${new Date(s.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+          <div class="hist-meta">${s.harmful_count||0} flagged · Score: ${s.safety_score||'—'}/100 · ${s.pet_type||'pet'}</div>
+        </div>
+        <div class="risk-pill ${s.overall_risk==='High risk'?'risk-high':s.overall_risk==='Medium risk'?'risk-med':'risk-low'}" style="font-size:10px">${(s.overall_risk||'').toUpperCase()}</div>
+      </div>`).join('');
+  } catch(e) { el.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠</div><div class="empty-title">Failed to load</div></div>'; }
+}
+
+function openProModal() { document.getElementById('proModal').classList.add('open'); }
+function closeProModal() { document.getElementById('proModal').classList.remove('open'); }
+function openRedeemModal() { document.getElementById('redeemModal').classList.add('open'); }
+function closeRedeemModal() { document.getElementById('redeemModal').classList.remove('open'); }
+
+async function redeemCode() {
+  const code = document.getElementById('redeemCodeInput').value.trim().toUpperCase();
+  if (!code) return showToast('Enter a code first');
+  document.getElementById('redeemSpin').style.display = 'block';
+  document.getElementById('redeemBtnText').textContent = 'Redeeming…';
+  try {
+    const d = await api('/auth/redeem-code', { method: 'POST', body: JSON.stringify({ code }) });
+    document.getElementById('redeemResult').innerHTML = `<span style="color:var(--safe)">✓ ${d.message}</span>`;
+    showToast('🎉 ' + d.message);
+    setTimeout(closeRedeemModal, 1500);
+  } catch(e) {
+    document.getElementById('redeemResult').innerHTML = `<span style="color:var(--danger)">⚠ ${e.error||'Invalid code'}</span>`;
+  } finally {
+    document.getElementById('redeemSpin').style.display = 'none';
+    document.getElementById('redeemBtnText').textContent = 'Redeem';
+  }
+}
+
+function switchTab(tab) {
+  ['scan','hist','account'].forEach(t => {
+    const sid = t==='scan'?'scanScreen':t==='hist'?'histScreen':'accountScreen';
+    document.getElementById(sid).classList.toggle('active', t===tab);
+    document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}`).classList.toggle('active', t===tab);
+  });
+  if (tab==='hist') renderHistory();
+  if (tab==='account') updateUI();
+}
+
+function showLegal(page) {
+  const content = page==='privacy'
+    ? `<h2 style="font-size:18px;font-weight:800;margin-bottom:14px">Privacy Policy</h2><div style="font-size:14px;color:var(--muted);line-height:1.8"><p style="margin-bottom:10px"><strong style="color:var(--text)">What we collect:</strong> Email, password (hashed), scan history.</p><p style="margin-bottom:10px"><strong style="color:var(--text)">What we never do:</strong> We never sell your data.</p><p><strong style="color:var(--text)">Contact:</strong> privacy@purityapps.com</p></div>`
+    : `<h2 style="font-size:18px;font-weight:800;margin-bottom:14px">Terms of Service</h2><div style="font-size:14px;color:var(--muted);line-height:1.8"><p style="margin-bottom:10px"><strong style="color:var(--text)">Informational only:</strong> Results are for informational purposes — not veterinary advice. Always consult your vet.</p><p style="margin-bottom:10px"><strong style="color:var(--text)">Free tier:</strong> 5 scans/month.</p><p><strong style="color:var(--text)">Contact:</strong> support@purityapps.com</p></div>`;
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)';
+  modal.innerHTML = `<div style="background:var(--white);border-radius:20px 20px 0 0;padding:24px 20px 48px;width:100%;max-width:480px;max-height:85dvh;overflow-y:auto"><div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px"></div>${content}<div style="height:16px"></div><button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;padding:14px;background:var(--bg);border:1.5px solid var(--border);border-radius:13px;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;color:var(--text);cursor:pointer">Close</button></div>`;
+  modal.addEventListener('click', e => { if (e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+['proModal','redeemModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target===document.getElementById(id)) document.getElementById(id).classList.remove('open');
+  });
+});
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+init();
+</script>
+
+<!-- Featurebase Feedback Widget -->
+<script>
+  window.fbAsyncInit = function() {
+    Featurebase("initialize_feedback_widget", {
+      organization: "purityapps",
+      theme: "light",
+      placement: "right",
+      email: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : null,
+      defaultTitle: "Feedback for PurityPets",
+      defaultDescription: "Please describe your bug or feature request for PurityPets.",
+      metadata: { app: "PurityPets" }
+    });
+  };
+</script>
+<script async defer src="https://do.featurebase.app/js/sdk.js" id="featurebase-sdk"></script>
+
+</body>
+</html>

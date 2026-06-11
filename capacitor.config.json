@@ -1,0 +1,11 @@
+{
+  "appId": "com.purityapps.puritypets",
+  "appName": "PurityPets",
+  "webDir": "frontend",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#5B4FE8"
+  }
+}
