@@ -7,5 +7,10 @@
   },
   "android": {
     "backgroundColor": "#5B4FE8"
+  },
+  "plugins": {
+    "AdMob": {
+      "appId": "ca-app-pub-3940256099942544~3347511713"
+    }
   }
 }
